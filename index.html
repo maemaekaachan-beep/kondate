@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#F6F1E4">
+<title>今日の献立</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🍳%3C/text%3E%3C/svg%3E">
+<style>
+  :root{
+    --bg:#F6F1E4; --bg-deep:#EFE9D8; --card:#FFFFFF; --ink:#3B3A32; --ink-soft:#8A8A78;
+    --green:#6B8560; --green-deep:#526846; --green-soft:#E4ECDD; --line:#E3DFCC;
+    --shadow:rgba(90,80,50,0.10); --warn:#B5651D;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+  html,body{overflow-x:hidden;}
+  body{
+    background:radial-gradient(ellipse at 15% 0%, rgba(107,133,96,0.08) 0%, transparent 45%), var(--bg);
+    background-attachment:fixed;
+    color:var(--ink);
+    font-family:'Zen Maru Gothic','Hiragino Maru Gothic ProN','Hiragino Sans','Noto Sans JP',sans-serif;
+    min-height:100vh;
+  }
+  button{font-family:inherit;color:inherit;cursor:pointer;border:none;background:none;}
+  input,textarea,select{font-family:inherit;color:inherit;}
+  .container{max-width:520px;margin:0 auto;padding:16px 14px 80px;}
+
+  header{text-align:center;padding:6px 0 14px;}
+  header .paw{font-size:26px;display:block;}
+  header h1{font-size:20px;font-weight:700;letter-spacing:.05em;}
+  header .date{font-size:14px;color:var(--ink-soft);margin-top:2px;}
+
+  .seg{display:flex;background:var(--bg-deep);border-radius:14px;padding:4px;gap:4px;margin-bottom:14px;}
+  .seg button{flex:1;padding:10px 4px;border-radius:11px;font-size:14px;font-weight:700;color:var(--ink-soft);}
+  .seg button.on{background:var(--card);color:var(--green-deep);box-shadow:0 1px 4px var(--shadow);}
+
+  .section-title{font-size:13px;font-weight:700;color:var(--ink-soft);margin:16px 2px 8px;letter-spacing:.05em;}
+
+  .tabs{display:flex;gap:8px;margin-bottom:12px;}
+  .tabs button{flex:1;padding:12px 4px;border-radius:14px;background:var(--card);border:2px solid var(--line);font-size:15px;font-weight:700;color:var(--ink-soft);}
+  .tabs button.on{border-color:var(--green);color:var(--green-deep);background:var(--green-soft);}
+  .meal-one{font-size:16px;font-weight:700;margin-bottom:10px;padding-left:2px;}
+
+  .moods{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:6px;}
+  .mood{padding:13px 4px;border-radius:14px;background:var(--card);border:2px solid var(--line);font-size:15px;font-weight:700;color:var(--ink-soft);}
+  .mood.on{border-color:var(--green);color:var(--green-deep);background:var(--green-soft);}
+
+  .cand{display:flex;align-items:center;gap:14px;width:100%;text-align:left;background:var(--card);border:2px solid var(--line);border-radius:18px;padding:16px;margin-bottom:10px;box-shadow:0 2px 8px var(--shadow);min-height:76px;}
+  .cand:active{transform:scale(.99);}
+  .cand .ic{font-size:34px;line-height:1;flex:none;}
+  .cand .nm{font-size:18px;font-weight:700;line-height:1.3;}
+  .cand .meta{font-size:12px;color:var(--ink-soft);margin-top:3px;}
+  .cand .soft{font-size:11px;color:var(--warn);margin-top:2px;}
+  .cand.picked{border-color:var(--green);background:var(--green-soft);}
+  .cand .tick{margin-left:auto;font-size:13px;font-weight:700;color:var(--green-deep);flex:none;}
+
+  .btn{display:block;width:100%;padding:14px;border-radius:14px;font-size:15px;font-weight:700;text-align:center;}
+  .btn.sub{background:var(--bg-deep);color:var(--ink);}
+  .btn.main{background:var(--green);color:#fff;}
+  .btn.danger{background:#F3E1D6;color:#8a3b12;}
+  .btn.ghost{color:var(--ink-soft);text-decoration:underline;font-weight:500;}
+
+  .empty{background:var(--card);border:2px dashed var(--line);border-radius:16px;padding:18px;text-align:center;color:var(--ink-soft);font-size:14px;line-height:1.6;}
+
+  .dec{background:var(--card);border-radius:16px;padding:12px 14px;margin-bottom:8px;box-shadow:0 2px 8px var(--shadow);}
+  .dec .top{display:flex;align-items:center;gap:10px;}
+  .dec .ml{flex:none;font-size:12px;font-weight:700;background:var(--green);color:#fff;border-radius:8px;padding:3px 8px;}
+  .dec .dn{font-size:17px;font-weight:700;flex:1;}
+  .dec .x{flex:none;font-size:20px;color:var(--ink-soft);padding:2px 8px;}
+  .dec .row2{display:flex;gap:8px;align-items:center;margin-top:8px;flex-wrap:wrap;}
+  .chip{padding:8px 12px;border-radius:999px;background:var(--bg-deep);font-size:13px;font-weight:700;}
+  .chip.veg{background:var(--green-soft);color:var(--green-deep);}
+  .chip.sug{background:var(--card);border:1px solid var(--line);font-weight:500;}
+
+  .shop{background:var(--card);border-radius:16px;padding:6px 14px;box-shadow:0 2px 8px var(--shadow);}
+  .item{display:flex;align-items:center;gap:12px;width:100%;text-align:left;padding:13px 0;border-bottom:1px solid var(--line);}
+  .item:last-child{border-bottom:none;}
+  .box{flex:none;width:26px;height:26px;border-radius:8px;border:2px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:16px;color:#fff;}
+  .item.done .box{background:var(--green);border-color:var(--green);}
+  .item .tx{font-size:17px;font-weight:500;}
+  .item .from{font-size:11px;color:var(--ink-soft);display:block;margin-top:1px;}
+  .item.done .tx{text-decoration:line-through;color:var(--ink-soft);}
+
+  .foot{margin-top:22px;text-align:center;}
+
+  /* 編集画面 */
+  .bar{display:flex;align-items:center;gap:8px;margin-bottom:12px;}
+  .bar .back{padding:10px 12px;font-weight:700;color:var(--green-deep);}
+  .bar h2{font-size:17px;font-weight:700;}
+  .mrow{display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:var(--card);border-radius:14px;padding:12px 14px;margin-bottom:8px;box-shadow:0 1px 4px var(--shadow);}
+  .mrow .ic{font-size:24px;flex:none;}
+  .mrow .nm{font-size:15px;font-weight:700;}
+  .mrow .meta{font-size:11px;color:var(--ink-soft);margin-top:2px;}
+  .mrow.ng{opacity:.55;}
+  .badge{display:inline-block;font-size:10px;font-weight:700;background:#F3E1D6;color:#8a3b12;border-radius:6px;padding:1px 6px;margin-left:6px;}
+  .field{margin-bottom:14px;}
+  .field label.l{display:block;font-size:13px;font-weight:700;color:var(--ink-soft);margin-bottom:6px;}
+  .field input[type=text],.field textarea{width:100%;padding:12px;border-radius:12px;border:2px solid var(--line);background:var(--card);font-size:16px;}
+  .field textarea{min-height:76px;resize:vertical;}
+  .field .hint{font-size:12px;color:var(--ink-soft);margin-top:5px;line-height:1.5;}
+  .opts{display:flex;gap:8px;flex-wrap:wrap;}
+  .opts label{display:flex;align-items:center;gap:6px;padding:10px 14px;border-radius:12px;background:var(--card);border:2px solid var(--line);font-size:14px;font-weight:700;}
+  .opts input{width:18px;height:18px;accent-color:var(--green);}
+  .sugs{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;}
+  .gap{height:10px;}
+</style>
+</head>
+<body>
+<div class="container" id="app"></div>
+
+<script>
+(function(){
+'use strict';
+
+/* ===== 定数 ===== */
+const LS_KEY = 'kondate-v1';
+const MEALS = ['breakfast','lunch','dinner'];
+const MEAL_LABEL = {breakfast:'朝', lunch:'昼', dinner:'夜'};
+const MEAL_FULL  = {breakfast:'朝ごはん', lunch:'昼ごはん', dinner:'夜ごはん'};
+const DAY_LABEL  = {bento:'お弁当の日', half:'半日', off:'休み'};
+const DAY_MEALS  = {bento:['dinner'], half:['lunch','dinner'], off:['breakfast','lunch','dinner']};
+const WEIGHT_LABEL = {heavy:'がっつり', light:'軽め'};
+const EFFORT_LABEL = {cook:'作る', easy:'楽'};
+// 苦手食材の言い換え（メニュー名・買うものに入っていたら除外するため）
+const ALIASES = {
+  'しいたけ':['しいたけ','シイタケ','椎茸','干ししいたけ','干し椎茸'],
+  '玉ねぎ':['玉ねぎ','玉ネギ','たまねぎ','タマネギ','玉葱'],
+  'ねぎ':['ねぎ','ネギ','葱','長ねぎ','青ねぎ','白ねぎ'],
+  'コーン':['コーン','とうもろこし','トウモロコシ']
+};
+const EXTRA_SUGGEST = ['鶏ひき肉','豚こま肉','鶏もも肉','味付け肉','鍋用の肉セット','豚ひき肉','豆腐','納豆','食パン','ベーコン','ハム','冷凍うどん','パスタ','鮭の切り身','焼きそば麺','カットサラダ','ミニトマト'];
+
+/* ===== 初期メニュー（アプリの中で自由に入れ替えられる） ===== */
+function M(id, icon, name, meals, weight, effort, buy, deli){
+  return {id, icon, name, meals, weight, effort, buy, deli: !!deli};
+}
+const DEFAULT_MENUS = [
+  M('omu','🍳','鶏ひき肉のオムライス',['lunch','dinner'],'heavy','cook',['鶏ひき肉']),
+  M('soboro','🍚','鶏そぼろ丼',['lunch','dinner'],'light','cook',['鶏ひき肉']),
+  M('nabe1','🍲','水炊き鍋（肉セット）',['dinner'],'light','easy',['鍋用の肉セット（水炊き）']),
+  M('nabe2','🌶️','キムチ鍋（肉セット）',['dinner'],'heavy','easy',['鍋用の肉セット','キムチ鍋のつゆ']),
+  M('nabe3','🥛','豆乳鍋（肉セット）',['dinner'],'light','easy',['鍋用の肉セット','豆乳鍋のつゆ']),
+  M('aji','🥩','味付け肉の炒め物',['dinner'],'heavy','easy',['味付け肉']),
+  M('shoga','🐖','豚の生姜焼き',['dinner'],'heavy','cook',['豚こま肉','生姜焼きのたれ']),
+  M('teri','🍗','鶏の照り焼き',['dinner'],'heavy','cook',['鶏もも肉']),
+  M('mabo','🌶️','麻婆豆腐',['dinner'],'heavy','cook',['豆腐','豚ひき肉','麻婆豆腐の素']),
+  M('komatsuna','🥬','豚と小松菜の炒め物',['dinner'],'light','cook',['豚こま肉','小松菜']),
+  M('shake','🐟','鮭の塩焼き',['dinner'],'light','easy',['鮭の切り身']),
+  M('pasta','🍝','しめじとベーコンのパスタ',['lunch','dinner'],'heavy','cook',['パスタ','ベーコン','しめじ']),
+  M('yakisoba','🍜','焼きそば（豚肉入り）',['lunch','dinner'],'heavy','easy',['焼きそば麺','豚こま肉']),
+  M('udon','🥣','卵とじうどん',['lunch','dinner'],'light','easy',['冷凍うどん']),
+  M('karaage','🍗','唐揚げ（惣菜）',['dinner'],'heavy','easy',[],true),
+  M('tonkatsu','🍖','とんかつ（惣菜）',['dinner'],'heavy','easy',[],true),
+  M('sashimi','🍣','刺身（惣菜コーナー）',['dinner'],'light','easy',[],true),
+  M('sushi','🍱','お寿司パック',['lunch','dinner'],'light','easy',[],true),
+  M('sozai','🛒','惣菜コーナーで選ぶ',['lunch','dinner'],'light','easy',[],true),
+  M('tkg','🥚','卵かけご飯',['breakfast'],'light','easy',[]),
+  M('toast','🍞','トーストと目玉焼き',['breakfast'],'light','easy',['食パン']),
+  M('natto','🫘','納豆ご飯',['breakfast'],'light','easy',['納豆']),
+  M('ham','🥓','ハムエッグ丼',['breakfast'],'heavy','easy',['ハム']),
+  M('sand','🥪','たまごサンド',['lunch'],'light','easy',['食パン']),
+  M('pan','🥐','惣菜パン',['breakfast','lunch'],'light','easy',[],true)
+];
+
+function defaults(){
+  return {
+    v:1,
+    menus: DEFAULT_MENUS.map(m => Object.assign({}, m, {meals:m.meals.slice(), buy:m.buy.slice()})),
+    ng: ['しいたけ','玉ねぎ','ねぎ','コーン'],
+    pantry: ['卵','冷凍ほうれん草'],
+    veg: ['小松菜','えのき','しめじ','冷凍ほうれん草'],
+    decided: {},      // { '2026-11-09': { dinner: {id, veg} } }
+    checks: {},       // { '2026-11-09': { '鶏ひき肉': true } }
+    dayOverride: {}   // { '2026-11-09': 'half' }
+  };
+}
+
+/* ===== 日付 ===== */
+function pad(n){ return String(n).padStart(2,'0'); }
+function fmt(d){ return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()); }
+function todayStr(){
+  const q = new URLSearchParams(location.search).get('d');   // 動作確認用: ?d=2026-11-11
+  if (q && /^\d{4}-\d{2}-\d{2}$/.test(q)) return q;
+  return fmt(new Date());
+}
+function parseDate(s){ const a = s.split('-').map(Number); return new Date(a[0], a[1]-1, a[2]); }
+function dayDiff(a, b){ return Math.round((parseDate(b) - parseDate(a)) / 86400000); }
+
+/* ===== 祝日判定（にゃんにち記録と同じ） ===== */
+const _holCache = {};
+function _key(y, m, d){ return y+'-'+pad(m)+'-'+pad(d); }
+function _nthMonday(y, m, n){
+  const dow = new Date(y, m-1, 1).getDay();
+  const first = 1 + ((1 - dow + 7) % 7);
+  return first + 7 * (n - 1);
+}
+function holidaysOf(y){
+  const set = new Set();
+  const add = (m, d) => set.add(_key(y, m, d));
+  const spring = Math.floor(20.8431 + 0.242194 * (y - 1980)) - Math.floor((y - 1980) / 4);
+  const autumn = Math.floor(23.2488 + 0.242194 * (y - 1980)) - Math.floor((y - 1980) / 4);
+  add(1,1); add(1,_nthMonday(y,1,2)); add(2,11); add(2,23); add(3,spring); add(4,29);
+  add(5,3); add(5,4); add(5,5); add(7,_nthMonday(y,7,3)); add(8,11); add(9,_nthMonday(y,9,3));
+  add(9,autumn); add(10,_nthMonday(y,10,2)); add(11,3); add(11,23);
+  [...set].sort().forEach(k => {
+    const p = k.split('-').map(Number);
+    if (new Date(p[0], p[1]-1, p[2]).getDay() !== 0) return;
+    const d = new Date(p[0], p[1]-1, p[2] + 1);
+    while (set.has(_key(d.getFullYear(), d.getMonth()+1, d.getDate()))) d.setDate(d.getDate() + 1);
+    set.add(_key(d.getFullYear(), d.getMonth()+1, d.getDate()));
+  });
+  for (let d = new Date(y, 0, 2); d.getFullYear() === y; d.setDate(d.getDate() + 1)){
+    const k = _key(y, d.getMonth()+1, d.getDate());
+    if (set.has(k) || d.getDay() === 0) continue;
+    const prev = new Date(d.getFullYear(), d.getMonth(), d.getDate() - 1);
+    const next = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1);
+    if (set.has(_key(prev.getFullYear(), prev.getMonth()+1, prev.getDate())) &&
+        set.has(_key(next.getFullYear(), next.getMonth()+1, next.getDate()))) set.add(k);
+  }
+  return set;
+}
+function isHoliday(s){
+  const y = Number(s.slice(0,4));
+  if (!_holCache[y]) _holCache[y] = holidaysOf(y);
+  return _holCache[y].has(s);
+}
+
+/* ===== 状態 ===== */
+let S = load();
+const U = { view:'main', meal:'dinner', mood:{weight:null, effort:null}, cands:[], tab:'menus', editId:null, msg:'' };
+
+function load(){
+  try{
+    const raw = localStorage.getItem(LS_KEY);
+    if (raw) return Object.assign(defaults(), JSON.parse(raw));
+  }catch(e){}
+  return defaults();
+}
+function save(){ try{ localStorage.setItem(LS_KEY, JSON.stringify(S)); }catch(e){} }
+function purgeOld(){
+  const t = todayStr();
+  ['decided','checks','dayOverride'].forEach(k => {
+    Object.keys(S[k]).forEach(d => { if (dayDiff(d, t) > 60) delete S[k][d]; });
+  });
+}
+
+function autoDayType(s){
+  const dow = parseDate(s).getDay();
+  if (dow === 0 || isHoliday(s)) return 'off';
+  if (dow === 3 || dow === 6) return 'half';
+  return 'bento';
+}
+function dayType(s){ return S.dayOverride[s] || autoDayType(s); }
+function menuById(id){ return S.menus.find(m => m.id === id); }
+
+/* ===== 苦手・常備 ===== */
+function ngTerms(){
+  const out = new Set();
+  S.ng.forEach(w => { if (!w) return; out.add(w); (ALIASES[w] || []).forEach(a => out.add(a)); });
+  return [...out];
+}
+function menuText(m){ return [m.name].concat(m.buy).join(' '); }
+function hitNG(text){ return ngTerms().find(t => text.includes(t)) || null; }
+function isPantry(name){ return S.pantry.indexOf(name) >= 0; }
+function vegPool(){ return S.veg.filter(v => !hitNG(v)); }
+
+/* ===== 候補選び ===== */
+function lastEatenDiff(id){
+  const t = todayStr();
+  let best = Infinity;
+  Object.keys(S.decided).forEach(d => {
+    const day = S.decided[d];
+    Object.keys(day).forEach(ml => {
+      if (day[ml].id === id){
+        const diff = dayDiff(d, t);
+        if (diff >= 0 && diff < best) best = diff;
+      }
+    });
+  });
+  return best;
+}
+function recentWeight(id){
+  const d = lastEatenDiff(id);
+  if (d <= 1) return 0.05;
+  if (d <= 3) return 0.3;
+  if (d <= 6) return 0.7;
+  return 1;
+}
+function sampleWeighted(items, n){
+  const res = [], arr = items.slice();
+  while (res.length < n && arr.length){
+    const ws = arr.map(m => recentWeight(m.id));
+    const tot = ws.reduce((a,b) => a+b, 0);
+    let r = Math.random() * tot, i = 0;
+    for (; i < arr.length; i++){ r -= ws[i]; if (r <= 0) break; }
+    if (i >= arr.length) i = arr.length - 1;
+    res.push(arr.splice(i, 1)[0]);
+  }
+  return res;
+}
+function refreshCands(reroll){
+  const all = S.menus.filter(m => m.meals.indexOf(U.meal) >= 0 && !hitNG(menuText(m)));
+  const match = m => (!U.mood.weight || m.weight === U.mood.weight) && (!U.mood.effort || m.effort === U.mood.effort);
+  const p1 = all.filter(match), p2 = all.filter(m => !match(m));
+  const prev = new Set(reroll ? U.cands.map(c => c.id) : []);
+  let out = [];
+  const take = (list, soft) => {
+    const need = 3 - out.length;
+    if (need <= 0) return;
+    const have = new Set(out.map(c => c.id));
+    const pool = list.filter(m => !have.has(m.id));
+    out = out.concat(sampleWeighted(pool, need).map(m => ({id:m.id, soft:soft})));
+  };
+  take(p1.filter(m => !prev.has(m.id)), false);
+  take(p1, false);
+  take(p2.filter(m => !prev.has(m.id)), true);
+  take(p2, true);
+  U.cands = out;
+}
+
+function initialMeal(needed){
+  if (needed.length === 1) return needed[0];
+  const h = new Date().getHours();
+  const pref = h < 10 ? 'breakfast' : (h < 15 ? 'lunch' : 'dinner');
+  if (needed.indexOf(pref) >= 0) return pref;
+  const order = MEALS;
+  const later = needed.find(ml => order.indexOf(ml) >= order.indexOf(pref));
+  return later || needed[needed.length - 1];
+}
+
+/* ===== 描画 ===== */
+function esc(s){
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function viewMain(){
+  const d = todayStr(), dt = dayType(d), needed = DAY_MEALS[dt];
+  const dd = parseDate(d);
+  const dateLabel = (dd.getMonth()+1)+'/'+dd.getDate()+'（'+'日月火水木金土'[dd.getDay()]+'）';
+  const dec = S.decided[d] || {};
+
+  let h = '<header><span class="paw">🐾</span><h1>今日の献立</h1><div class="date">'+dateLabel+'</div></header>';
+
+  h += '<div class="seg">' + ['bento','half','off'].map(k =>
+    '<button class="'+(dt===k?'on':'')+'" data-act="day" data-v="'+k+'">'+DAY_LABEL[k]+'</button>').join('') + '</div>';
+
+  // 決めたもの
+  const decidedMeals = MEALS.filter(ml => dec[ml] && menuById(dec[ml].id));
+  if (decidedMeals.length){
+    h += '<div class="section-title">今日のメニュー</div>';
+    decidedMeals.forEach(ml => {
+      const e = dec[ml], m = menuById(e.id);
+      h += '<div class="dec"><div class="top"><span class="ml">'+MEAL_LABEL[ml]+'</span><span class="dn">'+esc(m.icon||'🍽️')+' '+esc(m.name)+'</span>'
+        + '<button class="x" data-act="unpick" data-meal="'+ml+'" aria-label="取り消し">×</button></div>';
+      h += '<div class="row2">';
+      if (e.veg){
+        h += '<button class="chip veg" data-act="vegAdd" data-meal="'+ml+'">🥬 '+esc(e.veg)+(isPantry(e.veg)?'（常備）':'')+' ↻</button>'
+          + '<button class="chip" data-act="vegDel" data-meal="'+ml+'">野菜なし</button>';
+      } else if (vegPool().length){
+        h += '<button class="chip" data-act="vegAdd" data-meal="'+ml+'">＋野菜</button>';
+      }
+      h += '</div></div>';
+    });
+  }
+
+  // 食事の切り替え
+  h += '<div class="section-title">何を決める？</div>';
+  if (needed.length > 1){
+    h += '<div class="tabs">' + needed.map(ml =>
+      '<button class="'+(U.meal===ml?'on':'')+'" data-act="meal" data-v="'+ml+'">'+MEAL_FULL[ml]+(dec[ml]?' ✓':'')+'</button>').join('') + '</div>';
+  } else {
+    h += '<div class="meal-one">'+MEAL_FULL[needed[0]]+'だけ決めればOK</div>';
+  }
+
+  // 気分
+  h += '<div class="moods">'
+    + ['heavy','light'].map(k => '<button class="mood '+(U.mood.weight===k?'on':'')+'" data-act="mood" data-k="weight" data-v="'+k+'">'+WEIGHT_LABEL[k]+'</button>').join('')
+    + ['cook','easy'].map(k => '<button class="mood '+(U.mood.effort===k?'on':'')+'" data-act="mood" data-k="effort" data-v="'+k+'">'+(k==='cook'?'ちゃんと作る':'楽したい')+'</button>').join('')
+    + '</div>';
+
+  // 候補
+  h += '<div class="section-title">候補</div>';
+  if (!U.cands.length){
+    h += '<div class="empty">この食事に合うメニューがありません。<br>下の「メニュー・設定」から追加してね。</div>';
+  } else {
+    U.cands.forEach(c => {
+      const m = menuById(c.id); if (!m) return;
+      const picked = dec[U.meal] && dec[U.meal].id === m.id;
+      const meta = [WEIGHT_LABEL[m.weight], EFFORT_LABEL[m.effort]].concat(m.deli ? ['惣菜'] : []).join('・');
+      h += '<button class="cand '+(picked?'picked':'')+'" data-act="pick" data-v="'+esc(m.id)+'">'
+        + '<span class="ic">'+esc(m.icon||'🍽️')+'</span>'
+        + '<span><span class="nm">'+esc(m.name)+'</span><div class="meta">'+meta+'</div>'
+        + (c.soft ? '<div class="soft">気分とは少し違うけど</div>' : '') + '</span>'
+        + (picked ? '<span class="tick">✓ 決定</span>' : '') + '</button>';
+    });
+    h += '<button class="btn sub" data-act="reroll">ほかの候補を見る</button>';
+  }
+
+  // 買い物リスト
+  const items = shoppingItems(d);
+  if (decidedMeals.length){
+    h += '<div class="section-title">🛒 買うもの</div>';
+    if (!items.length){
+      h += '<div class="empty">買うものはなし（家にあるものでOK）</div>';
+    } else {
+      const chk = S.checks[d] || {};
+      const sorted = items.filter(i => !chk[i.name]).concat(items.filter(i => chk[i.name]));
+      h += '<div class="shop">' + sorted.map(i =>
+        '<button class="item '+(chk[i.name]?'done':'')+'" data-act="check" data-v="'+esc(i.name)+'">'
+        + '<span class="box">'+(chk[i.name]?'✓':'')+'</span>'
+        + '<span class="tx">'+esc(i.name)+(decidedMeals.length>1?'<span class="from">'+esc(i.from.join('・'))+'</span>':'')+'</span></button>').join('') + '</div>';
+    }
+  }
+
+  h += '<div class="foot"><button class="btn ghost" data-act="toEdit">メニュー・設定</button></div>';
+  return h;
+}
+
+function shoppingItems(d){
+  const dec = S.decided[d] || {};
+  const map = new Map();
+  MEALS.forEach(ml => {
+    const e = dec[ml]; if (!e) return;
+    const m = menuById(e.id); if (!m) return;
+    m.buy.concat(e.veg ? [e.veg] : []).forEach(name => {
+      if (!name || isPantry(name)) return;
+      if (!map.has(name)) map.set(name, {name:name, from:[]});
+      if (map.get(name).from.indexOf(m.name) < 0) map.get(name).from.push(m.name);
+    });
+  });
+  return [...map.values()];
+}
+
+function viewEdit(){
+  let h = '<div class="bar"><button class="back" data-act="back">← 戻る</button><h2>メニュー・設定</h2></div>';
+  h += '<div class="seg"><button class="'+(U.tab==='menus'?'on':'')+'" data-act="tab" data-v="menus">メニュー</button>'
+     + '<button class="'+(U.tab==='settings'?'on':'')+'" data-act="tab" data-v="settings">苦手・常備・野菜</button></div>';
+
+  if (U.tab === 'menus'){
+    h += '<button class="btn main" data-act="newMenu">＋ 新しいメニュー</button><div class="gap"></div>';
+    MEALS.slice().reverse().forEach(ml => {
+      const list = S.menus.filter(m => m.meals.indexOf(ml) >= 0);
+      if (!list.length) return;
+      h += '<div class="section-title">'+MEAL_FULL[ml]+'（'+list.length+'）</div>';
+      list.forEach(m => {
+        const ng = hitNG(menuText(m));
+        h += '<button class="mrow '+(ng?'ng':'')+'" data-act="editMenu" data-v="'+esc(m.id)+'">'
+          + '<span class="ic">'+esc(m.icon||'🍽️')+'</span><span><span class="nm">'+esc(m.name)+'</span>'
+          + (ng ? '<span class="badge">'+esc(ng)+'入りで除外中</span>' : '')
+          + '<div class="meta">'+WEIGHT_LABEL[m.weight]+'・'+EFFORT_LABEL[m.effort]+(m.deli?'・惣菜':'')+'　買う: '+(m.buy.length?esc(m.buy.join('、')):'なし')+'</div></span></button>';
+      });
+    });
+  } else {
+    if (U.msg){ h += '<div class="empty" style="margin-bottom:12px;color:var(--green-deep);font-weight:700;">'+esc(U.msg)+'</div>'; U.msg = ''; }
+    h += '<div class="field"><label class="l">苦手な食材（出さない）</label><input type="text" id="s_ng" value="'+esc(S.ng.join('、'))+'">'
+      + '<div class="hint">メニュー名や「買うもの」にこの言葉が入っていると、候補から外れます。「、」で区切って入力。</div></div>';
+    h += '<div class="field"><label class="l">常備品（買い物リストに出さない）</label><input type="text" id="s_pantry" value="'+esc(S.pantry.join('、'))+'">'
+      + '<div class="hint">卵のように、いつも家にあるもの。</div></div>';
+    h += '<div class="field"><label class="l">足していい野菜・きのこ</label><input type="text" id="s_veg" value="'+esc(S.veg.join('、'))+'">'
+      + '<div class="hint">「＋野菜」ボタンはここから選びます。</div></div>';
+    h += '<button class="btn main" data-act="saveSettings">保存する</button><div class="gap"></div>'
+      + '<button class="btn danger" data-act="resetMenus">メニューと設定を初期状態に戻す</button>';
+  }
+  return h;
+}
+
+function viewMenuForm(){
+  const isNew = U.editId === 'new';
+  const m = isNew ? {id:'', icon:'🍽️', name:'', meals:['dinner'], weight:'heavy', effort:'cook', buy:[], deli:false} : menuById(U.editId);
+  if (!m) { U.view = 'edit'; return viewEdit(); }
+  const sugSet = new Set(EXTRA_SUGGEST.concat(S.veg));
+  S.menus.forEach(x => x.buy.forEach(b => sugSet.add(b)));
+  const sugs = [...sugSet].filter(s => !hitNG(s));
+
+  let h = '<div class="bar"><button class="back" data-act="cancelMenu">← 戻る</button><h2>'+(isNew?'新しいメニュー':'メニューを編集')+'</h2></div>';
+  h += '<div class="field"><label class="l">名前</label><input type="text" id="f_name" value="'+esc(m.name)+'" placeholder="例: 豚汁"></div>';
+  h += '<div class="field"><label class="l">絵文字</label><input type="text" id="f_icon" value="'+esc(m.icon||'')+'" maxlength="4"></div>';
+  h += '<div class="field"><label class="l">食べる時間（複数OK）</label><div class="opts">'
+    + MEALS.map(ml => '<label><input type="checkbox" class="f_meal" value="'+ml+'" '+(m.meals.indexOf(ml)>=0?'checked':'')+'>'+MEAL_FULL[ml]+'</label>').join('') + '</div></div>';
+  h += '<div class="field"><label class="l">ボリューム</label><div class="opts">'
+    + ['heavy','light'].map(k => '<label><input type="radio" name="f_weight" value="'+k+'" '+(m.weight===k?'checked':'')+'>'+WEIGHT_LABEL[k]+'</label>').join('') + '</div></div>';
+  h += '<div class="field"><label class="l">手間</label><div class="opts">'
+    + [['cook','ちゃんと作る'],['easy','楽']].map(a => '<label><input type="radio" name="f_effort" value="'+a[0]+'" '+(m.effort===a[0]?'checked':'')+'>'+a[1]+'</label>').join('') + '</div></div>';
+  h += '<div class="field"><div class="opts"><label><input type="checkbox" id="f_deli" '+(m.deli?'checked':'')+'>惣菜・買ってくるもの</label></div></div>';
+  h += '<div class="field"><label class="l">買うもの（「、」区切り。なしでもOK）</label><textarea id="f_buy">'+esc(m.buy.join('、'))+'</textarea>'
+    + '<div class="sugs">' + sugs.map(s => '<button class="chip sug" data-act="sug" data-v="'+esc(s)+'">＋'+esc(s)+'</button>').join('') + '</div></div>';
+  h += '<button class="btn main" data-act="saveMenu">保存する</button>';
+  if (!isNew) h += '<div class="gap"></div><button class="btn danger" data-act="delMenu">このメニューを消す</button>';
+  return h;
+}
+
+function render(){
+  const root = document.getElementById('app');
+  root.innerHTML = U.view === 'main' ? viewMain() : (U.view === 'edit' ? viewEdit() : viewMenuForm());
+}
+
+/* ===== 操作 ===== */
+function splitList(s){ return s.split(/[,、，\n]/).map(x => x.trim()).filter(Boolean); }
+
+document.addEventListener('click', e => {
+  const el = e.target.closest('[data-act]');
+  if (!el) return;
+  const act = el.dataset.act, v = el.dataset.v, ml = el.dataset.meal;
+  const d = todayStr();
+
+  switch(act){
+    case 'day': {
+      if (v === autoDayType(d)) delete S.dayOverride[d]; else S.dayOverride[d] = v;
+      const needed = DAY_MEALS[dayType(d)];
+      if (needed.indexOf(U.meal) < 0) U.meal = initialMeal(needed);
+      save(); refreshCands(); render(); break;
+    }
+    case 'meal': U.meal = v; refreshCands(); render(); break;
+    case 'mood': {
+      const k = el.dataset.k;
+      U.mood[k] = (U.mood[k] === v) ? null : v;
+      refreshCands(); render(); break;
+    }
+    case 'reroll': refreshCands(true); render(); break;
+    case 'pick': {
+      S.decided[d] = S.decided[d] || {};
+      if (S.decided[d][U.meal] && S.decided[d][U.meal].id === v) delete S.decided[d][U.meal];
+      else S.decided[d][U.meal] = {id:v, veg:null};
+      save(); render(); break;
+    }
+    case 'unpick': if (S.decided[d]) delete S.decided[d][ml]; save(); render(); break;
+    case 'vegAdd': {
+      const e2 = S.decided[d] && S.decided[d][ml]; if (!e2) break;
+      const pool = vegPool().filter(x => x !== e2.veg);
+      if (pool.length) e2.veg = pool[Math.floor(Math.random() * pool.length)];
+      save(); render(); break;
+    }
+    case 'vegDel': { const e3 = S.decided[d] && S.decided[d][ml]; if (e3) e3.veg = null; save(); render(); break; }
+    case 'check': {
+      S.checks[d] = S.checks[d] || {};
+      if (S.checks[d][v]) delete S.checks[d][v]; else S.checks[d][v] = true;
+      save(); render(); break;
+    }
+    case 'toEdit': U.view = 'edit'; U.tab = 'menus'; render(); window.scrollTo(0,0); break;
+    case 'back': U.view = 'main'; refreshCands(); render(); window.scrollTo(0,0); break;
+    case 'tab': U.tab = v; render(); break;
+    case 'newMenu': U.editId = 'new'; U.view = 'form'; render(); window.scrollTo(0,0); break;
+    case 'editMenu': U.editId = v; U.view = 'form'; render(); window.scrollTo(0,0); break;
+    case 'cancelMenu': U.view = 'edit'; render(); window.scrollTo(0,0); break;
+    case 'sug': {
+      const ta = document.getElementById('f_buy');
+      const cur = splitList(ta.value);
+      if (cur.indexOf(v) < 0) cur.push(v);
+      ta.value = cur.join('、');
+      break;
+    }
+    case 'saveMenu': {
+      const name = document.getElementById('f_name').value.trim();
+      const meals = [...document.querySelectorAll('.f_meal:checked')].map(x => x.value);
+      if (!name){ alert('名前を入れてね'); break; }
+      if (!meals.length){ alert('食べる時間を1つは選んでね'); break; }
+      const rec = {
+        icon: document.getElementById('f_icon').value.trim() || '🍽️',
+        name: name, meals: meals,
+        weight: document.querySelector('input[name=f_weight]:checked').value,
+        effort: document.querySelector('input[name=f_effort]:checked').value,
+        deli: document.getElementById('f_deli').checked,
+        buy: splitList(document.getElementById('f_buy').value)
+      };
+      if (U.editId === 'new') S.menus.push(Object.assign({id:'u'+Date.now()}, rec));
+      else Object.assign(menuById(U.editId), rec);
+      save(); U.view = 'edit'; render(); window.scrollTo(0,0); break;
+    }
+    case 'delMenu': {
+      if (!confirm('このメニューを消す？')) break;
+      S.menus = S.menus.filter(m => m.id !== U.editId);
+      save(); U.view = 'edit'; render(); window.scrollTo(0,0); break;
+    }
+    case 'saveSettings': {
+      S.ng = splitList(document.getElementById('s_ng').value);
+      S.pantry = splitList(document.getElementById('s_pantry').value);
+      S.veg = splitList(document.getElementById('s_veg').value);
+      U.msg = '保存したよ';
+      save(); render(); break;
+    }
+    case 'resetMenus': {
+      if (!confirm('メニューと設定を初期状態に戻す？（今日までの記録は残ります）')) break;
+      const df = defaults();
+      S.menus = df.menus; S.ng = df.ng; S.pantry = df.pantry; S.veg = df.veg;
+      save(); render(); break;
+    }
+  }
+});
+
+/* ===== 起動 ===== */
+purgeOld();
+U.meal = initialMeal(DAY_MEALS[dayType(todayStr())]);
+refreshCands();
+render();
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+})();
+</script>
+</body>
+</html>
