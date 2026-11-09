@@ -73,6 +73,8 @@
   .chip{padding:8px 12px;border-radius:999px;background:var(--bg-deep);font-size:13px;font-weight:700;}
   .chip.veg{background:var(--green-soft);color:var(--green-deep);}
   .chip.sug{background:var(--card);border:1px solid var(--line);font-weight:500;}
+  a.chip{display:inline-block;text-decoration:none;color:var(--ink);}
+  a.chip.recipe{background:#FBEFD5;color:#8a5a12;}
 
   .shop{background:var(--card);border-radius:16px;padding:6px 14px;box-shadow:0 2px 8px var(--shadow);}
   .item{display:flex;align-items:center;gap:12px;width:100%;text-align:left;padding:13px 0;border-bottom:1px solid var(--line);}
@@ -134,7 +136,7 @@ const EXTRA_SUGGEST = ['鶏ひき肉','豚こま肉','鶏もも肉','味付け�
 
 /* ===== 初期メニュー（アプリの中で自由に入れ替えられる） ===== */
 function M(id, icon, name, meals, weight, effort, buy, deli){
-  return {id, icon, name, meals, weight, effort, buy, deli: !!deli};
+  return {id, icon, name, meals, weight, effort, buy, deli: !!deli, url: ''};
 }
 const DEFAULT_MENUS = [
   M('omu','🍳','鶏ひき肉のオムライス',['lunch','dinner'],'heavy','cook',['鶏ひき肉']),
@@ -355,6 +357,9 @@ function viewMain(){
       h += '<div class="dec"><div class="top"><span class="ml">'+MEAL_LABEL[ml]+'</span><span class="dn">'+esc(m.icon||'🍽️')+' '+esc(m.name)+'</span>'
         + '<button class="x" data-act="unpick" data-meal="'+ml+'" aria-label="取り消し">×</button></div>';
       h += '<div class="row2">';
+      if (m.url){
+        h += '<a class="chip recipe" href="'+esc(m.url)+'" target="_blank" rel="noopener noreferrer">📖 作り方を見る</a>';
+      }
       if (e.veg){
         h += '<button class="chip veg" data-act="vegAdd" data-meal="'+ml+'">🥬 '+esc(e.veg)+(isPantry(e.veg)?'（常備）':'')+' ↻</button>'
           + '<button class="chip" data-act="vegDel" data-meal="'+ml+'">野菜なし</button>';
@@ -449,7 +454,7 @@ function viewEdit(){
         h += '<button class="mrow '+(ng?'ng':'')+'" data-act="editMenu" data-v="'+esc(m.id)+'">'
           + '<span class="ic">'+esc(m.icon||'🍽️')+'</span><span><span class="nm">'+esc(m.name)+'</span>'
           + (ng ? '<span class="badge">'+esc(ng)+'入りで除外中</span>' : '')
-          + '<div class="meta">'+WEIGHT_LABEL[m.weight]+'・'+EFFORT_LABEL[m.effort]+(m.deli?'・惣菜':'')+'　買う: '+(m.buy.length?esc(m.buy.join('、')):'なし')+'</div></span></button>';
+          + '<div class="meta">'+WEIGHT_LABEL[m.weight]+'・'+EFFORT_LABEL[m.effort]+(m.deli?'・惣菜':'')+(m.url?'・📖':'')+'　買う: '+(m.buy.length?esc(m.buy.join('、')):'なし')+'</div></span></button>';
       });
     });
   } else {
@@ -468,7 +473,7 @@ function viewEdit(){
 
 function viewMenuForm(){
   const isNew = U.editId === 'new';
-  const m = isNew ? {id:'', icon:'🍽️', name:'', meals:['dinner'], weight:'heavy', effort:'cook', buy:[], deli:false} : menuById(U.editId);
+  const m = isNew ? {id:'', icon:'🍽️', name:'', meals:['dinner'], weight:'heavy', effort:'cook', buy:[], deli:false, url:''} : menuById(U.editId);
   if (!m) { U.view = 'edit'; return viewEdit(); }
   const sugSet = new Set(EXTRA_SUGGEST.concat(S.veg));
   S.menus.forEach(x => x.buy.forEach(b => sugSet.add(b)));
@@ -486,6 +491,8 @@ function viewMenuForm(){
   h += '<div class="field"><div class="opts"><label><input type="checkbox" id="f_deli" '+(m.deli?'checked':'')+'>惣菜・買ってくるもの</label></div></div>';
   h += '<div class="field"><label class="l">買うもの（「、」区切り。なしでもOK）</label><textarea id="f_buy">'+esc(m.buy.join('、'))+'</textarea>'
     + '<div class="sugs">' + sugs.map(s => '<button class="chip sug" data-act="sug" data-v="'+esc(s)+'">＋'+esc(s)+'</button>').join('') + '</div></div>';
+  h += '<div class="field"><label class="l">レシピのURL（なしでもOK）</label><input type="text" id="f_url" inputmode="url" autocapitalize="off" autocorrect="off" value="'+esc(m.url||'')+'" placeholder="https://cookpad.com/…">'
+    + '<div class="hint">入れておくと、決めたあとに「作り方を見る」ボタンが出ます。</div></div>';
   h += '<button class="btn main" data-act="saveMenu">保存する</button>';
   if (!isNew) h += '<div class="gap"></div><button class="btn danger" data-act="delMenu">このメニューを消す</button>';
   return h;
@@ -556,12 +563,15 @@ document.addEventListener('click', e => {
       const meals = [...document.querySelectorAll('.f_meal:checked')].map(x => x.value);
       if (!name){ alert('名前を入れてね'); break; }
       if (!meals.length){ alert('食べる時間を1つは選んでね'); break; }
+      const url = document.getElementById('f_url').value.trim();
+      if (url && !/^https?:\/\/\S+$/i.test(url)){ alert('URLは https:// から始まるものを入れてね'); break; }
       const rec = {
         icon: document.getElementById('f_icon').value.trim() || '🍽️',
         name: name, meals: meals,
         weight: document.querySelector('input[name=f_weight]:checked').value,
         effort: document.querySelector('input[name=f_effort]:checked').value,
         deli: document.getElementById('f_deli').checked,
+        url: url,
         buy: splitList(document.getElementById('f_buy').value)
       };
       if (U.editId === 'new') S.menus.push(Object.assign({id:'u'+Date.now()}, rec));
