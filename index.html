@@ -91,6 +91,11 @@
   .item .del{margin-left:auto;flex:none;font-size:18px;color:var(--ink-soft);padding:4px 8px;}
   .clr{display:block;margin:8px auto 0;font-size:13px;color:var(--ink-soft);text-decoration:underline;padding:6px;}
 
+  .catseg{display:flex;gap:6px;margin-bottom:8px;}
+  .catseg button{flex:1;padding:8px 4px;border-radius:10px;background:var(--bg-deep);font-size:13px;font-weight:700;color:var(--ink-soft);}
+  .catseg button.on{background:var(--green-soft);color:var(--green-deep);}
+  .exgrp{font-size:12px;font-weight:700;color:var(--ink-soft);margin:10px 2px 4px;}
+  .item .cat{flex:none;font-size:15px;padding:4px 6px;opacity:.7;}
   .foot{margin-top:22px;text-align:center;}
 
   /* 編集画面 */
@@ -238,7 +243,7 @@ function isHoliday(s){
 
 /* ===== 状態 ===== */
 let S = load();
-const U = { view:'main', meal:'dinner', mood:{weight:null, effort:null}, cands:[], tab:'menus', editId:null, msg:'' };
+const U = { exCat:'food', view:'main', meal:'dinner', mood:{weight:null, effort:null}, cands:[], tab:'menus', editId:null, msg:'' };
 
 function load(){
   try{
@@ -355,17 +360,26 @@ function viewMain(){
   h += '<div class="seg">' + ['bento','half','off'].map(k =>
     '<button class="'+(dt===k?'on':'')+'" data-act="day" data-v="'+k+'">'+DAY_LABEL[k]+'</button>').join('') + '</div>';
 
-  // 買い足し（日用品など。チェックするまで日をまたいで残る）
-  h += '<div class="section-title">🧴 買い足し（日用品など）</div>';
-  h += '<div class="addrow"><input type="text" id="ex_in" placeholder="洗剤、ティッシュ、牛乳…" enterkeyhint="done" autocomplete="off">'
+  // 買い足し（食料品・日用品。チェックするまで日をまたいで残る）
+  h += '<div class="section-title">🛒 買い足し</div>';
+  h += '<div class="catseg">'
+    + '<button class="'+(U.exCat==='food'?'on':'')+'" data-act="exCatSel" data-v="food">🥬 食料品</button>'
+    + '<button class="'+(U.exCat==='daily'?'on':'')+'" data-act="exCatSel" data-v="daily">🧴 日用品</button></div>';
+  h += '<div class="addrow"><input type="text" id="ex_in" placeholder="'+(U.exCat==='food'?'牛乳、卵、豆腐…':'洗剤、ティッシュ…')+'" enterkeyhint="done" autocomplete="off">'
     + '<button data-act="exAdd">追加</button></div>';
   const ex = S.extras || [];
   if (ex.length){
-    const exs = ex.filter(i => !i.done).concat(ex.filter(i => i.done));
-    h += '<div class="shop">' + exs.map(i =>
-      '<div class="item '+(i.done?'done':'')+'" style="cursor:pointer" data-act="exCheck" data-v="'+esc(i.id)+'">'
-      + '<span class="box">'+(i.done?'✓':'')+'</span><span class="tx">'+esc(i.name)+'</span>'
-      + '<button class="del" data-act="exDel" data-v="'+esc(i.id)+'" aria-label="消す">×</button></div>').join('') + '</div>';
+    [['food','🥬 食料品'],['daily','🧴 日用品']].forEach(g => {
+      const list = ex.filter(i => (i.cat || 'daily') === g[0]);
+      if (!list.length) return;
+      const exs = list.filter(i => !i.done).concat(list.filter(i => i.done));
+      h += '<div class="exgrp">'+g[1]+'</div>';
+      h += '<div class="shop">' + exs.map(i =>
+        '<div class="item '+(i.done?'done':'')+'" style="cursor:pointer" data-act="exCheck" data-v="'+esc(i.id)+'">'
+        + '<span class="box">'+(i.done?'✓':'')+'</span><span class="tx">'+esc(i.name)+'</span>'
+        + '<button class="cat" data-act="exMove" data-v="'+esc(i.id)+'" aria-label="'+(g[0]==='food'?'日用品へ移す':'食料品へ移す')+'">'+(g[0]==='food'?'🧴':'🥬')+'</button>'
+        + '<button class="del" style="margin-left:0" data-act="exDel" data-v="'+esc(i.id)+'" aria-label="消す">×</button></div>').join('') + '</div>';
+    });
     if (ex.some(i => i.done)) h += '<button class="clr" data-act="exClear">チェック済みをまとめて消す</button>';
   }
 
@@ -578,11 +592,23 @@ document.addEventListener('click', e => {
       const names = splitList(inp.value);
       if (!names.length) break;
       S.extras = S.extras || [];
-      names.forEach((n,i) => S.extras.push({id:'x'+Date.now()+'_'+i, name:n, done:false}));
+      names.forEach((n,i) => S.extras.push({id:'x'+Date.now()+'_'+i, name:n, done:false, cat:U.exCat}));
       save(); render(); document.getElementById('ex_in').focus(); break;
     }
+    case 'exCatSel': {
+      U.exCat = v;
+      const inp0 = document.getElementById('ex_in'), keep = inp0 ? inp0.value : '';
+      render();
+      const inp1 = document.getElementById('ex_in'); if (inp1) inp1.value = keep;
+      break;
+    }
+    case 'exMove': {
+      const it2 = (S.extras||[]).find(x => x.id === v);
+      if (it2){ it2.cat = ((it2.cat || 'daily') === 'food') ? 'daily' : 'food'; save(); render(); }
+      break;
+    }
     case 'exCheck': {
-      if (e.target.closest('[data-act=exDel]')) break;
+      if (e.target.closest('[data-act=exDel]') || e.target.closest('[data-act=exMove]')) break;
       const it = (S.extras||[]).find(x => x.id === v); if (it){ it.done = !it.done; save(); render(); }
       break;
     }
