@@ -85,6 +85,12 @@
   .item .from{font-size:11px;color:var(--ink-soft);display:block;margin-top:1px;}
   .item.done .tx{text-decoration:line-through;color:var(--ink-soft);}
 
+  .addrow{display:flex;gap:8px;margin-bottom:8px;}
+  .addrow input{flex:1;min-width:0;padding:12px;border-radius:12px;border:2px solid var(--line);background:var(--card);font-size:16px;}
+  .addrow button{flex:none;padding:0 18px;border-radius:12px;background:var(--green);color:#fff;font-size:15px;font-weight:700;}
+  .item .del{margin-left:auto;flex:none;font-size:18px;color:var(--ink-soft);padding:4px 8px;}
+  .clr{display:block;margin:8px auto 0;font-size:13px;color:var(--ink-soft);text-decoration:underline;padding:6px;}
+
   .foot{margin-top:22px;text-align:center;}
 
   /* 編集画面 */
@@ -175,7 +181,8 @@ function defaults(){
     veg: ['小松菜','えのき','しめじ','冷凍ほうれん草'],
     decided: {},      // { '2026-11-09': { dinner: {id, veg} } }
     checks: {},       // { '2026-11-09': { '鶏ひき肉': true } }
-    dayOverride: {}   // { '2026-11-09': 'half' }
+    dayOverride: {},  // { '2026-11-09': 'half' }
+    extras: []        // 買い足し [{id, name, done}]  日をまたいで残る
   };
 }
 
@@ -348,6 +355,20 @@ function viewMain(){
   h += '<div class="seg">' + ['bento','half','off'].map(k =>
     '<button class="'+(dt===k?'on':'')+'" data-act="day" data-v="'+k+'">'+DAY_LABEL[k]+'</button>').join('') + '</div>';
 
+  // 買い足し（日用品など。チェックするまで日をまたいで残る）
+  h += '<div class="section-title">🧴 買い足し（日用品など）</div>';
+  h += '<div class="addrow"><input type="text" id="ex_in" placeholder="洗剤、ティッシュ、牛乳…" enterkeyhint="done" autocomplete="off">'
+    + '<button data-act="exAdd">追加</button></div>';
+  const ex = S.extras || [];
+  if (ex.length){
+    const exs = ex.filter(i => !i.done).concat(ex.filter(i => i.done));
+    h += '<div class="shop">' + exs.map(i =>
+      '<div class="item '+(i.done?'done':'')+'" style="cursor:pointer" data-act="exCheck" data-v="'+esc(i.id)+'">'
+      + '<span class="box">'+(i.done?'✓':'')+'</span><span class="tx">'+esc(i.name)+'</span>'
+      + '<button class="del" data-act="exDel" data-v="'+esc(i.id)+'" aria-label="消す">×</button></div>').join('') + '</div>';
+    if (ex.some(i => i.done)) h += '<button class="clr" data-act="exClear">チェック済みをまとめて消す</button>';
+  }
+
   // 決めたもの
   const decidedMeals = MEALS.filter(ml => dec[ml] && menuById(dec[ml].id));
   if (decidedMeals.length){
@@ -506,6 +527,13 @@ function render(){
 /* ===== 操作 ===== */
 function splitList(s){ return s.split(/[,、，\n]/).map(x => x.trim()).filter(Boolean); }
 
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && e.target && e.target.id === 'ex_in'){
+    e.preventDefault();
+    const b = document.querySelector('[data-act=exAdd]'); if (b) b.click();
+  }
+});
+
 document.addEventListener('click', e => {
   const el = e.target.closest('[data-act]');
   if (!el) return;
@@ -545,6 +573,21 @@ document.addEventListener('click', e => {
       if (S.checks[d][v]) delete S.checks[d][v]; else S.checks[d][v] = true;
       save(); render(); break;
     }
+    case 'exAdd': {
+      const inp = document.getElementById('ex_in');
+      const names = splitList(inp.value);
+      if (!names.length) break;
+      S.extras = S.extras || [];
+      names.forEach((n,i) => S.extras.push({id:'x'+Date.now()+'_'+i, name:n, done:false}));
+      save(); render(); document.getElementById('ex_in').focus(); break;
+    }
+    case 'exCheck': {
+      if (e.target.closest('[data-act=exDel]')) break;
+      const it = (S.extras||[]).find(x => x.id === v); if (it){ it.done = !it.done; save(); render(); }
+      break;
+    }
+    case 'exDel': S.extras = (S.extras||[]).filter(x => x.id !== v); save(); render(); break;
+    case 'exClear': S.extras = (S.extras||[]).filter(x => !x.done); save(); render(); break;
     case 'toEdit': U.view = 'edit'; U.tab = 'menus'; render(); window.scrollTo(0,0); break;
     case 'back': U.view = 'main'; refreshCands(); render(); window.scrollTo(0,0); break;
     case 'tab': U.tab = v; render(); break;
